@@ -1,0 +1,72 @@
+import { readFileSync } from "fs";
+import { Relu, Sigmoid } from "./neural-networks/ActivationFunction";
+import { MultilayerPerceptron } from "./neural-networks/MultilayerPerceptron";
+import getPixel from "get-pixels";
+import { Vector } from "./vector/Vector";
+import { maxIndex, parseMnistDataSet } from "./utils/helpers";
+import _ from "underscore";
+
+const mlps = new Array(10).fill(0).map((_, i) => {
+  const weights = JSON.parse(
+    readFileSync(
+      process.cwd() + `/src/dataset/mnist_weights_${i}.json`
+    ).toString()
+  );
+
+  return new MultilayerPerceptron({
+    inputWidth: 784,
+    hiddenWidth: 200,
+    hiddenDepth: 1,
+    outputWidth: 1,
+    hiddenActivationFuncs: [new Relu()],
+    outputActivationFunc: new Sigmoid(),
+    weights,
+  });
+});
+
+const mnistTestSet = _.sample(
+  parseMnistDataSet(process.cwd() + "/src/dataset/mnist_test.csv"),
+  1000
+);
+
+const predict = (image: number[]): number => {
+  const predicted = mlps.map(
+    (mlp) => mlp.predict(new Vector(image.map((x) => x / 255))).entries[0]
+  );
+
+  return maxIndex(predicted);
+};
+
+let correct = 0;
+
+/*
+for (const [index, instance] of mnistTestSet.entries()) {
+  const z = predict(instance.features);
+  console.log(index);
+  if (z === instance.response) {
+    correct++;
+    console.log("CORRECT!");
+  } else {
+    console.log("WRONG!");
+  }
+}
+
+console.log({ correct, numberOfTest: mnistTestSet.length });
+*/
+
+getPixel(process.cwd() + "/src/dataset/test_image.jpg", (err, pixels) => {
+  const image = new Array(784);
+
+  for (let i = 0; i < 28; i++) {
+    for (let j = 0; j < 28; j++) {
+      image[i * 28 + j] = Math.round(
+        0 +
+          (0.2989 * pixels.get(j, i, 0) +
+            0.587 * pixels.get(j, i, 1) +
+            0.114 * pixels.get(j, i, 2))
+      );
+    }
+  }
+
+  console.log(predict(image))
+});
